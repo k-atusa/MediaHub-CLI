@@ -133,13 +133,17 @@ var streamCmd = &cobra.Command{
 		}
 		sort.Strings(names)
 
-		headers := []string{"File Name", "Direct Streaming URL"}
+		cols := []TableColumn{
+			{Header: "File Name", Align: AlignLeft, Flex: true, MinWidth: 20},
+			{Header: "Direct Streaming URL", Align: AlignLeft, MinWidth: 40, TextColor: ColorCyan},
+		}
 		var rows [][]string
 		for _, name := range names {
 			url := streamProxy.StreamURL(fPid, name)
-			rows = append(rows, []string{name, url})
+			icon := FileTypeIcon(name)
+			rows = append(rows, []string{fmt.Sprintf("%s %s", icon, name), url})
 		}
-		PrintTable(headers, rows)
+		RenderResponsiveTable(cols, rows)
 
 		fmt.Println("\nTo play a stream with mpv or vlc:")
 		if len(names) > 0 {

@@ -49,20 +49,26 @@ var fileListCmd = &cobra.Command{
 			return files[i].Name < files[j].Name
 		})
 
-		headers := []string{"File Name", "Size", "File PID"}
+		cols := []TableColumn{
+			{Header: "File Name", Align: AlignLeft, Flex: true, MinWidth: 24},
+			{Header: "Size", Align: AlignRight, MinWidth: 10, TextColor: ColorYellow},
+			{Header: "File PID", Align: AlignLeft, MinWidth: 24, MaxWidth: 24, TextColor: ColorGray},
+		}
 		var rows [][]string
 		var totalSize int64 = 0
 		for _, f := range files {
 			totalSize += f.Size
+			icon := FileTypeIcon(f.Name)
+			displayName := fmt.Sprintf("%s %s", icon, f.Name)
 			rows = append(rows, []string{
-				f.Name,
+				displayName,
 				FormatBytes(f.Size),
 				f.PID,
 			})
 		}
 
-		PrintTable(headers, rows)
-		fmt.Printf("\nTotal: %d files (%s)\n", len(files), FormatBytes(totalSize))
+		RenderResponsiveTable(cols, rows)
+		fmt.Printf("\n%sTotal: %d files (%s)%s\n", ColorDim, len(files), FormatBytes(totalSize), ColorReset)
 		return nil
 	},
 }

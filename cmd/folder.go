@@ -49,16 +49,22 @@ var folderListCmd = &cobra.Command{
 		}
 		sort.Strings(names)
 
-		headers := []string{"Folder Name", "Folder PID", "Key Prefix"}
+		cols := []TableColumn{
+			{Header: "Folder Name", Align: AlignLeft, Flex: true, MinWidth: 20},
+			{Header: "Folder PID", Align: AlignLeft, MinWidth: 24, MaxWidth: 24, TextColor: ColorCyan},
+			{Header: "Key Prefix", Align: AlignLeft, MinWidth: 14, MaxWidth: 14, TextColor: ColorGray},
+		}
 		var rows [][]string
 		for _, name := range names {
 			key := flds[name]
 			pid := cli.ObjPid(key)
 			keyPrefix := fmt.Sprintf("%x...", key[:6])
-			rows = append(rows, []string{name, pid, keyPrefix})
+			displayName := fmt.Sprintf("📁 %s", name)
+			rows = append(rows, []string{displayName, pid, keyPrefix})
 		}
 
-		PrintTable(headers, rows)
+		RenderResponsiveTable(cols, rows)
+		fmt.Printf("\n%sTotal: %d folders%s\n", ColorDim, len(names), ColorReset)
 		return nil
 	},
 }
