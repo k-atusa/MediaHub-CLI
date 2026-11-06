@@ -69,7 +69,6 @@ var loginCmd = &cobra.Command{
 			return fmt.Errorf("key derivation failed: %w", err)
 		}
 
-		// Verify credentials against server by attempting to fetch userdata
 		fmt.Printf("%s[+] Verifying credentials with %s...%s\n", ColorCyan, server, ColorReset)
 		flds, err := cli.FetchFolders()
 		if err != nil {

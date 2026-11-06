@@ -17,7 +17,6 @@ var (
 	flagInsecureTLS bool
 )
 
-// RootCmd is the primary CLI command.
 var RootCmd = &cobra.Command{
 	Use:   "mediahub",
 	Short: "MediaHub CLI: Zero-Trust Encrypted File Sharing & Media Streaming Platform",
@@ -39,9 +38,8 @@ func init() {
 	RootCmd.PersistentFlags().BoolVarP(&flagInsecureTLS, "insecure", "k", false, "Skip TLS certificate verification (for self-signed certs)")
 }
 
-// GetClient resolves the active client instance using flags or saved session.
 func GetClient() (*client.Client, error) {
-	// If explicit server and user are provided in flags, use them directly
+
 	if flagServerURL != "" && flagUsername != "" {
 		pw := flagPassword
 		if pw == "" {
@@ -58,13 +56,11 @@ func GetClient() (*client.Client, error) {
 		return cli, nil
 	}
 
-	// Otherwise, load saved session
 	cli, err := client.LoadSavedSession()
 	if err != nil {
 		return nil, errors.New("not logged in. Please run 'mediahub login' or provide --server and --user flags")
 	}
 
-	// Override with any CLI flags if given
 	if flagServerURL != "" {
 		cli.ServerURL = flagServerURL
 	}
@@ -78,7 +74,6 @@ func GetClient() (*client.Client, error) {
 	return cli, nil
 }
 
-// Execute runs the root command.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "%sError: %v%s\n", ColorRed, err, ColorReset)

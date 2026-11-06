@@ -8,7 +8,7 @@ import (
 )
 
 func TestPadLen(t *testing.T) {
-	// Boundary checks
+
 	if PadLen(0) != 0 {
 		t.Fatalf("PadLen(0) should be 0")
 	}
@@ -30,7 +30,7 @@ func TestEncodeDecodeCfg(t *testing.T) {
 	cfg := map[string][]byte{
 		"short": []byte("hello short"),
 		"empty": []byte{},
-		"long":  bytes.Repeat([]byte{0x77}, 1000), // > 255 bytes, needs 2-byte len
+		"long":  bytes.Repeat([]byte{0x77}, 1000),
 	}
 
 	enc := EncodeCfg(cfg)
@@ -68,7 +68,6 @@ func TestShareToken(t *testing.T) {
 		t.Fatalf("Key mismatch")
 	}
 
-	// Wrong password test
 	_, _, err = ImportShareToken(token, "WrongPassword")
 	if err == nil {
 		t.Fatalf("Expected error with wrong password")

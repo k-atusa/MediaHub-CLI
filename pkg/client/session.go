@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 )
 
-// SessionConfig persists client authentication details locally.
 type SessionConfig struct {
 	ServerURL   string `json:"server_url"`
 	Username    string `json:"username"`
@@ -18,7 +17,6 @@ type SessionConfig struct {
 	InsecureTLS bool   `json:"insecure_tls"`
 }
 
-// ConfigFilePath returns the path to ~/.mediahub/config.json.
 func ConfigFilePath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -27,7 +25,6 @@ func ConfigFilePath() (string, error) {
 	return filepath.Join(home, ".mediahub", "config.json"), nil
 }
 
-// SaveSession saves the current client's credentials to config.json.
 func (c *Client) SaveSession() error {
 	cfgPath, err := ConfigFilePath()
 	if err != nil {
@@ -54,7 +51,6 @@ func (c *Client) SaveSession() error {
 	return os.WriteFile(cfgPath, data, 0600)
 }
 
-// LoadSavedSession loads session credentials from ~/.mediahub/config.json.
 func LoadSavedSession() (*Client, error) {
 	cfgPath, err := ConfigFilePath()
 	if err != nil {
@@ -84,7 +80,6 @@ func LoadSavedSession() (*Client, error) {
 	return cli, nil
 }
 
-// ClearSession deletes the stored session credentials.
 func ClearSession() error {
 	cfgPath, err := ConfigFilePath()
 	if err != nil {
@@ -96,7 +91,6 @@ func ClearSession() error {
 	return nil
 }
 
-// HasActiveSession checks if a saved session configuration file exists.
 func HasActiveSession() bool {
 	cfgPath, err := ConfigFilePath()
 	if err != nil {

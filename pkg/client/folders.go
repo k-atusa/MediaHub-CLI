@@ -11,7 +11,6 @@ import (
 	"github.com/k-atusa/mediahub-cli/pkg/opsec"
 )
 
-// FetchFolders retrieves and decrypts the user's folder map from the server.
 func (c *Client) FetchFolders() (map[string][]byte, error) {
 	if c.UHash == "" {
 		return nil, errors.New("not authenticated: run login or auth first")
@@ -55,7 +54,6 @@ func (c *Client) FetchFolders() (map[string][]byte, error) {
 	return c.FldMap, nil
 }
 
-// saveFolders encrypts and uploads the current folder map to the server.
 func (c *Client) saveFolders() error {
 	if c.UHash == "" {
 		return errors.New("not authenticated")
@@ -90,7 +88,6 @@ func (c *Client) saveFolders() error {
 	return nil
 }
 
-// CreateFolder creates a new encrypted folder on the server.
 func (c *Client) CreateFolder(name string) error {
 	if _, err := c.FetchFolders(); err != nil {
 		return err
@@ -100,16 +97,13 @@ func (c *Client) CreateFolder(name string) error {
 		return fmt.Errorf("folder '%s' already exists", name)
 	}
 
-	// 32B AES key + 12B PID nonce = 44B
 	fKey := append(bencrypt.Random(32), bencrypt.Random(12)...)
 	c.FldMap[name] = fKey
 
-	// Save folder list in userdata
 	if err := c.saveFolders(); err != nil {
 		return err
 	}
 
-	// Initialize empty folder metadata storage on server
 	fPid := c.ObjPid(fKey)
 	emptyFlMap := make(map[string][]byte)
 	sm, err := bencrypt.NewSymMaster("gcm1", fKey[:32])
@@ -142,7 +136,6 @@ func (c *Client) CreateFolder(name string) error {
 	return nil
 }
 
-// UnlinkFolder removes the folder from the user's personal userdata without deleting files on server.
 func (c *Client) UnlinkFolder(name string) error {
 	if _, err := c.FetchFolders(); err != nil {
 		return err
@@ -155,7 +148,6 @@ func (c *Client) UnlinkFolder(name string) error {
 	return c.saveFolders()
 }
 
-// DeleteFolder permanently removes folder storage on the server and drops it from userdata.
 func (c *Client) DeleteFolder(name string) error {
 	if _, err := c.FetchFolders(); err != nil {
 		return err
@@ -167,7 +159,6 @@ func (c *Client) DeleteFolder(name string) error {
 
 	fPid := c.ObjPid(fKey)
 
-	// Hard delete storage on server
 	url := fmt.Sprintf("%s/api/storage/%s/names", c.ServerURL, fPid)
 	req, err := http.NewRequest(http.MethodDelete, url, nil)
 	if err != nil {
@@ -189,7 +180,6 @@ func (c *Client) DeleteFolder(name string) error {
 	return c.saveFolders()
 }
 
-// ExportShare generates an encrypted share token for a folder.
 func (c *Client) ExportShare(name string, password string) (string, error) {
 	if _, err := c.FetchFolders(); err != nil {
 		return "", err
@@ -202,7 +192,6 @@ func (c *Client) ExportShare(name string, password string) (string, error) {
 	return opsec.ExportShareToken(name, fKey, password)
 }
 
-// ImportShare imports a folder using an encrypted share token.
 func (c *Client) ImportShare(tokenText string, password string) (string, error) {
 	fName, fKey, err := opsec.ImportShareToken(tokenText, password)
 	if err != nil {

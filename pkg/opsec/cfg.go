@@ -11,13 +11,11 @@ import (
 	"github.com/k-atusa/mediahub-cli/pkg/bencrypt"
 )
 
-// PadLen calculates the obfuscated padding length based on the original encrypted file size.
 func PadLen(size int64) int64 {
 	if size <= 0 {
 		return 0
 	}
 
-	// 1. 0 - 16k: 4k * N
 	if size <= 16384 {
 		remainder := size % 4096
 		if remainder == 0 {
@@ -28,13 +26,13 @@ func PadLen(size int64) int64 {
 
 	bitLen := bits.Len64(uint64(size))
 	var k int
-	if bitLen <= 24 { // 16k - 16m: K=2
+	if bitLen <= 24 {
 		k = 2
-	} else if bitLen <= 29 { // 16m - 512m: K=3
+	} else if bitLen <= 29 {
 		k = 3
-	} else if bitLen <= 33 { // 512m - 8g: K=4
+	} else if bitLen <= 33 {
 		k = 4
-	} else { // 8g+: K=5
+	} else {
 		k = 5
 	}
 
@@ -48,9 +46,8 @@ func PadLen(size int64) int64 {
 	return int64(aftersize) - size
 }
 
-// PadFile writes size bytes of random padding to dst.
 func PadFile(dst io.Writer, size int64) error {
-	const bufSize = 1048576 // 1MB
+	const bufSize = 1048576
 	rem := size
 	for rem > 0 {
 		toWrite := rem
@@ -66,7 +63,6 @@ func PadFile(dst io.Writer, size int64) error {
 	return nil
 }
 
-// EncodeInt serializes an integer into little-endian bytes of specified length.
 func EncodeInt(data uint64, size int) []byte {
 	buf := make([]byte, size)
 	for i := 0; i < size; i++ {
@@ -75,7 +71,6 @@ func EncodeInt(data uint64, size int) []byte {
 	return buf
 }
 
-// DecodeInt deserializes little-endian bytes into uint64.
 func DecodeInt(data []byte) uint64 {
 	var val uint64
 	for i := 0; i < len(data) && i < 8; i++ {
@@ -84,10 +79,8 @@ func DecodeInt(data []byte) uint64 {
 	return val
 }
 
-// EncodeCfg encodes key-value pairs into Opsec Cfg format:
-// [keyLen 1B (keyLen > 127 if dataLen > 255)][key][dataLen 1B or 2B][data]
 func EncodeCfg(data map[string][]byte) []byte {
-	// Deterministic ordering by sorting keys
+
 	keys := make([]string, 0, len(data))
 	for k := range data {
 		keys = append(keys, k)
@@ -124,7 +117,6 @@ func EncodeCfg(data map[string][]byte) []byte {
 	return result
 }
 
-// DecodeCfg decodes Opsec Cfg binary format into key-value pairs.
 func DecodeCfg(data []byte) (map[string][]byte, error) {
 	result := make(map[string][]byte)
 	offset := 0

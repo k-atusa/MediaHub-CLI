@@ -8,8 +8,7 @@ import (
 )
 
 func TestPythonCrossCompatibility(t *testing.T) {
-	// Let's run a quick python script using python3 that imports ../MediaHub-Desktop
-	// and verifies that Go and Python produce matching outputs.
+
 	cmd := exec.Command("python3", "-c", `
 import sys
 sys.path.append("../MediaHub-Desktop")
@@ -44,7 +43,6 @@ print(f"{pwStore.hex()}:{keyGen.hex()}:{ciph.hex()}")
 	pyKeyGen, _ := hex.DecodeString(string(parts[1]))
 	pyCiph, _ := hex.DecodeString(string(parts[2]))
 
-	// 1. Verify KDF matches
 	hm, err := NewHashMaster("arg2st", 32, 32)
 	if err != nil {
 		t.Fatalf("NewHashMaster: %v", err)
@@ -63,7 +61,6 @@ print(f"{pwStore.hex()}:{keyGen.hex()}:{ciph.hex()}")
 		t.Fatalf("keyGen mismatch! py: %x, go: %x", pyKeyGen, goKeyGen)
 	}
 
-	// 2. Decrypt Python's GCM ciphertext in Go
 	key := bytes.Repeat([]byte{0x42}, 32)
 	sm, err := NewSymMaster("gcm1", key)
 	if err != nil {

@@ -21,7 +21,6 @@ func TestBencode(t *testing.T) {
 		t.Fatalf("Expected %s, got %s", data, dec)
 	}
 
-	// Raw test
 	encRaw, err := Encode64(data, "", 40, 10)
 	if err != nil {
 		t.Fatalf("Encode64 raw failed: %v", err)
@@ -34,7 +33,6 @@ func TestBencode(t *testing.T) {
 		t.Fatalf("Raw decode mismatch")
 	}
 
-	// NormPW test
 	pw1 := NormPW("한글암호123")
 	if len(pw1) == 0 {
 		t.Fatalf("NormPW returned empty")

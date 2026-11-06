@@ -13,7 +13,6 @@ import (
 	"github.com/k-atusa/mediahub-cli/pkg/opsec"
 )
 
-// GetFiles retrieves the file map and keys for a folder.
 func (c *Client) GetFiles(folderName string) (string, []byte, map[string][]byte, error) {
 	if _, err := c.FetchFolders(); err != nil {
 		return "", nil, nil, err
@@ -58,7 +57,6 @@ func (c *Client) GetFiles(folderName string) (string, []byte, map[string][]byte,
 	return fPid, fKey, flMap, nil
 }
 
-// saveFiles encrypts and uploads the updated file map for a folder.
 func (c *Client) saveFiles(fPid string, fKey []byte, flMap map[string][]byte) error {
 	sm, err := bencrypt.NewSymMaster("gcm1", fKey[:32])
 	if err != nil {
@@ -89,7 +87,6 @@ func (c *Client) saveFiles(fPid string, fKey []byte, flMap map[string][]byte) er
 	return nil
 }
 
-// ListFiles lists all files in the specified folder with parsed metadata.
 func (c *Client) ListFiles(folderName string) ([]FileInfo, error) {
 	_, _, flMap, err := c.GetFiles(folderName)
 	if err != nil {
@@ -116,7 +113,6 @@ func (c *Client) ListFiles(folderName string) ([]FileInfo, error) {
 	return files, nil
 }
 
-// UploadFile encrypts and uploads a local file to the specified remote folder.
 func (c *Client) UploadFile(folderName string, localPath string, progCb func(sent, total int64, speed float64)) error {
 	fInfo, err := os.Stat(localPath)
 	if err != nil {
@@ -134,11 +130,9 @@ func (c *Client) UploadFile(folderName string, localPath string, progCb func(sen
 		return err
 	}
 
-	// 1. Generate unique file key and ID
 	fk := append(bencrypt.Random(32), bencrypt.Random(12)...)
 	fpid := c.ObjPid(fk)
 
-	// 2. Encrypt file using AES-GCMx with obfuscation padding
 	smx, err := bencrypt.NewSymMaster("gcmx1", fk[:32])
 	if err != nil {
 		return err
@@ -148,7 +142,6 @@ func (c *Client) UploadFile(folderName string, localPath string, progCb func(sen
 	padSz := opsec.PadLen(encSz)
 	totalUpload := encSz + padSz
 
-	// Use temporary file for staging encrypted payload
 	tmpFile, err := os.CreateTemp("", "mediahub-up-*")
 	if err != nil {
 		return fmt.Errorf("failed to create temporary file: %w", err)
@@ -177,7 +170,6 @@ func (c *Client) UploadFile(folderName string, localPath string, progCb func(sen
 		return err
 	}
 
-	// 3. Upload encrypted media blob
 	uploadURL := fmt.Sprintf("%s/api/media/%s/%s/dat", c.ServerURL, fPid, fpid)
 	pr := NewProgressReader(tmpFile, totalUpload, progCb)
 	req, err := http.NewRequest(http.MethodPost, uploadURL, pr)
@@ -198,17 +190,14 @@ func (c *Client) UploadFile(folderName string, localPath string, progCb func(sen
 		return fmt.Errorf("upload rejected by server: HTTP %d", resp.StatusCode)
 	}
 
-	// Final progress report at 100%
 	if progCb != nil {
 		progCb(totalUpload, totalUpload, 0)
 	}
 
-	// 4. Update folder metadata
 	flMap[fileName] = append(fk, opsec.EncodeInt(uint64(origSz), 8)...)
 	return c.saveFiles(fPid, fKey, flMap)
 }
 
-// DownloadFile downloads and decrypts a file from the server into outPath.
 func (c *Client) DownloadFile(folderName string, fileName string, outPath string, progCb func(sent, total int64, speed float64)) error {
 	fPid, _, flMap, err := c.GetFiles(folderName)
 	if err != nil {
@@ -241,7 +230,6 @@ func (c *Client) DownloadFile(folderName string, fileName string, outPath string
 		return fmt.Errorf("download failed: HTTP %d", resp.StatusCode)
 	}
 
-	// Ensure destination directory exists
 	if err := os.MkdirAll(filepath.Dir(outPath), 0755); err != nil {
 		return err
 	}
@@ -263,7 +251,6 @@ func (c *Client) DownloadFile(folderName string, fileName string, outPath string
 	return nil
 }
 
-// DeleteFile removes a file from folder metadata and deletes the encrypted blob from server.
 func (c *Client) DeleteFile(folderName string, fileName string) error {
 	fPid, fKey, flMap, err := c.GetFiles(folderName)
 	if err != nil {
@@ -278,7 +265,6 @@ func (c *Client) DeleteFile(folderName string, fileName string) error {
 	fk := flInfo[:44]
 	fpid := c.ObjPid(fk)
 
-	// Delete dat blob
 	urlDat := fmt.Sprintf("%s/api/media/%s/%s/dat", c.ServerURL, fPid, fpid)
 	reqDat, _ := http.NewRequest(http.MethodDelete, urlDat, nil)
 	reqDat.Header.Set("X-User-Hash", c.UHash)
@@ -287,7 +273,6 @@ func (c *Client) DeleteFile(folderName string, fileName string) error {
 		respDat.Body.Close()
 	}
 
-	// Delete thumb blob
 	urlThumb := fmt.Sprintf("%s/api/media/%s/%s/thumb", c.ServerURL, fPid, fpid)
 	reqThumb, _ := http.NewRequest(http.MethodDelete, urlThumb, nil)
 	reqThumb.Header.Set("X-User-Hash", c.UHash)
@@ -296,12 +281,10 @@ func (c *Client) DeleteFile(folderName string, fileName string) error {
 		respThumb.Body.Close()
 	}
 
-	// Update metadata
 	delete(flMap, fileName)
 	return c.saveFiles(fPid, fKey, flMap)
 }
 
-// TrimFolder removes orphan files in a folder on the server.
 func (c *Client) TrimFolder(folderName string) (string, error) {
 	fPid, _, flMap, err := c.GetFiles(folderName)
 	if err != nil {

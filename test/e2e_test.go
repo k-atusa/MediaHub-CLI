@@ -18,12 +18,11 @@ import (
 	"github.com/k-atusa/mediahub-cli/pkg/proxy"
 )
 
-// MockMediaHubServer simulates the MediaHub server API in-memory.
 type MockMediaHubServer struct {
 	mu       sync.Mutex
 	userdata map[string][]byte
-	storage  map[string]map[string][]byte // folderPid -> "names" -> data
-	media    map[string][]byte            // "folderPid/filePid/type" -> data
+	storage  map[string]map[string][]byte
+	media    map[string][]byte
 	ts       *httptest.Server
 }
 
@@ -36,7 +35,6 @@ func newMockServer() *MockMediaHubServer {
 
 	mux := http.NewServeMux()
 
-	// Userdata endpoint
 	mux.HandleFunc("/api/userdata/", func(w http.ResponseWriter, r *http.Request) {
 		uHash := strings.TrimPrefix(r.URL.Path, "/api/userdata/")
 		s.mu.Lock()
@@ -48,7 +46,7 @@ func newMockServer() *MockMediaHubServer {
 				w.WriteHeader(http.StatusOK)
 				w.Write(data)
 			} else {
-				w.WriteHeader(http.StatusOK) // Return empty if new
+				w.WriteHeader(http.StatusOK)
 			}
 		case http.MethodPost:
 			body, _ := io.ReadAll(r.Body)
@@ -58,7 +56,6 @@ func newMockServer() *MockMediaHubServer {
 		}
 	})
 
-	// Storage names endpoint
 	mux.HandleFunc("/api/storage/", func(w http.ResponseWriter, r *http.Request) {
 		parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/storage/"), "/")
 		if len(parts) < 2 {
@@ -92,7 +89,6 @@ func newMockServer() *MockMediaHubServer {
 		}
 	})
 
-	// Media endpoint
 	mux.HandleFunc("/api/media/", func(w http.ResponseWriter, r *http.Request) {
 		parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/media/"), "/")
 		if len(parts) < 3 {
@@ -132,27 +128,23 @@ func TestE2ELifecycle(t *testing.T) {
 	srv := newMockServer()
 	defer srv.ts.Close()
 
-	// 1. Initialize client and authenticate
 	cli := client.NewClient(srv.ts.URL, "alice", "SecretPassword2026!", true)
 	if err := cli.Auth(); err != nil {
 		t.Fatalf("Auth failed: %v", err)
 	}
 
-	// 2. Create encrypted folder
 	folderName := "TestVideos"
 	if err := cli.CreateFolder(folderName); err != nil {
 		t.Fatalf("CreateFolder failed: %v", err)
 	}
 
-	// 3. Prepare dummy video file (3MB of data to test multiple GCMx chunks)
 	tmpDir := t.TempDir()
 	sampleVideoPath := filepath.Join(tmpDir, "sample.mp4")
-	sampleContent := bytes.Repeat([]byte("0123456789ABCDEF"), 200*1024) // 3.2MB
+	sampleContent := bytes.Repeat([]byte("0123456789ABCDEF"), 200*1024)
 	if err := os.WriteFile(sampleVideoPath, sampleContent, 0644); err != nil {
 		t.Fatalf("WriteFile failed: %v", err)
 	}
 
-	// 4. Upload file
 	var lastSent, lastTotal int64
 	err := cli.UploadFile(folderName, sampleVideoPath, func(sent, total int64, speed float64) {
 		lastSent = sent
@@ -165,7 +157,6 @@ func TestE2ELifecycle(t *testing.T) {
 		t.Fatalf("Upload progress did not complete: %d / %d", lastSent, lastTotal)
 	}
 
-	// 5. List files
 	files, err := cli.ListFiles(folderName)
 	if err != nil {
 		t.Fatalf("ListFiles failed: %v", err)
@@ -177,7 +168,6 @@ func TestE2ELifecycle(t *testing.T) {
 		t.Fatalf("Original size mismatch: expected %d, got %d", len(sampleContent), files[0].Size)
 	}
 
-	// 6. Download file and verify byte equality
 	downloadPath := filepath.Join(tmpDir, "downloaded.mp4")
 	err = cli.DownloadFile(folderName, "sample.mp4", downloadPath, nil)
 	if err != nil {
@@ -191,7 +181,6 @@ func TestE2ELifecycle(t *testing.T) {
 		t.Fatalf("Downloaded content does not match original!")
 	}
 
-	// 7. Test Streaming Proxy with Range Seeking
 	fPid, _, flMap, err := cli.GetFiles(folderName)
 	if err != nil {
 		t.Fatalf("GetFiles failed: %v", err)
@@ -209,7 +198,6 @@ func TestE2ELifecycle(t *testing.T) {
 		t.Fatalf("Stream URL port mismatch: %s", streamURL)
 	}
 
-	// Request Range bytes=1500000-2500000 (crossing chunk boundaries!)
 	req, _ := http.NewRequest(http.MethodGet, streamURL, nil)
 	req.Header.Set("Range", "bytes=1500000-2500000")
 	pClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
@@ -233,7 +221,6 @@ func TestE2ELifecycle(t *testing.T) {
 		t.Fatalf("Streamed Range slice does not match expected slice! len exp=%d, got=%d", len(expectedSlice), len(streamedBytes))
 	}
 
-	// 8. Test Share Token export and import by Bob
 	shareToken, err := cli.ExportShare(folderName, "BobSharePass123")
 	if err != nil {
 		t.Fatalf("ExportShare failed: %v", err)
@@ -251,7 +238,6 @@ func TestE2ELifecycle(t *testing.T) {
 		t.Fatalf("Imported folder name mismatch: expected %s, got %s", folderName, importedFolderName)
 	}
 
-	// Bob can list files in shared folder
 	bobFiles, err := bobCli.ListFiles(importedFolderName)
 	if err != nil {
 		t.Fatalf("Bob ListFiles failed: %v", err)
@@ -260,12 +246,10 @@ func TestE2ELifecycle(t *testing.T) {
 		t.Fatalf("Bob could not see shared file: %+v", bobFiles)
 	}
 
-	// 9. Bob unlinks folder
 	if err := bobCli.UnlinkFolder(importedFolderName); err != nil {
 		t.Fatalf("Bob UnlinkFolder failed: %v", err)
 	}
 
-	// Alice deletes file
 	if err := cli.DeleteFile(folderName, "sample.mp4"); err != nil {
 		t.Fatalf("DeleteFile failed: %v", err)
 	}

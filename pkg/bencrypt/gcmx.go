@@ -7,9 +7,8 @@ import (
 	"io"
 )
 
-const ChunkSize = 1048576 // 1MB
+const ChunkSize = 1048576
 
-// AfterSize calculates the total encrypted size for AES-GCMx1 given the original size.
 func AfterSize(size int64) int64 {
 	c := size/ChunkSize + 1
 	if size != 0 && size%ChunkSize == 0 {
@@ -18,7 +17,6 @@ func AfterSize(size int64) int64 {
 	return size + 12 + 16*c
 }
 
-// EnGCMx encrypts a stream of data into 1MB chunks using AES-GCMx.
 func (sm *SymMaster) EnGCMx(src io.Reader, size int64, dst io.Writer, progCb func(processed int64)) error {
 	block, err := aes.NewCipher(sm.Key)
 	if err != nil {
@@ -67,7 +65,6 @@ func (sm *SymMaster) EnGCMx(src io.Reader, size int64, dst io.Writer, progCb fun
 		}
 	}
 
-	// Handle 0-byte file edge case
 	if size == 0 {
 		iv := MkIV(globalIV, 0)
 		ciphertext := aesGCM.Seal(nil, iv, []byte{}, nil)
@@ -82,7 +79,6 @@ func (sm *SymMaster) EnGCMx(src io.Reader, size int64, dst io.Writer, progCb fun
 	return nil
 }
 
-// DeGCMx decrypts a stream of data encrypted with AES-GCMx.
 func (sm *SymMaster) DeGCMx(src io.Reader, encSize int64, dst io.Writer, progCb func(processed int64)) error {
 	if encSize < 28 {
 		return errors.New("cipher too short to decrypt")
@@ -142,7 +138,6 @@ func (sm *SymMaster) DeGCMx(src io.Reader, encSize int64, dst io.Writer, progCb 
 	return nil
 }
 
-// DecryptChunk decrypts a single GCMx chunk given globalIV and chunk index.
 func (sm *SymMaster) DecryptChunk(globalIV []byte, chunkIdx uint64, cipherChunk []byte) ([]byte, error) {
 	if len(cipherChunk) < 16 {
 		return nil, errors.New("chunk too short")

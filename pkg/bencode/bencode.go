@@ -20,7 +20,6 @@ func isSplitable(s string) bool {
 	return false
 }
 
-// Encode64 encodes data into base64, optionally formatted with delimiters and line/column wrapping.
 func Encode64(data []byte, spliter string, linenum int, colnum int) (string, error) {
 	if len(data) == 0 {
 		return "", nil
@@ -69,9 +68,8 @@ func Encode64(data []byte, spliter string, linenum int, colnum int) (string, err
 	return sb.String(), nil
 }
 
-// Decode64 removes whitespace and optional delimiter comments, then decodes standard base64.
 func Decode64(data string, spliter string) ([]byte, error) {
-	// Remove \t, \r, \n, and space
+
 	data = strings.ReplaceAll(data, "\t", "")
 	data = strings.ReplaceAll(data, "\r", "")
 	data = strings.ReplaceAll(data, "\n", "")
@@ -99,7 +97,6 @@ func Decode64(data string, spliter string) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(data)
 }
 
-// NormPW normalizes a password string using Unicode NFC and returns UTF-8 bytes.
 func NormPW(pw string) []byte {
 	if pw == "" {
 		return []byte{}

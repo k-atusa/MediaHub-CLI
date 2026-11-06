@@ -21,11 +21,10 @@ import (
 )
 
 const (
-	PlainChunkSize  = 1048576 // 1MB
+	PlainChunkSize  = 1048576
 	CipherChunkSize = PlainChunkSize + 16
 )
 
-// StreamProxy provides on-demand decrypted HTTP streaming for encrypted media blobs.
 type StreamProxy struct {
 	server   *http.Server
 	listener net.Listener
@@ -40,7 +39,6 @@ type StreamProxy struct {
 	cacheMu    sync.Mutex
 }
 
-// NewStreamProxy creates a new streaming proxy server.
 func NewStreamProxy(cli *client.Client, port int) *StreamProxy {
 	return &StreamProxy{
 		client:     cli,
@@ -51,7 +49,6 @@ func NewStreamProxy(cli *client.Client, port int) *StreamProxy {
 	}
 }
 
-// UpdateContext updates the active folder PID and file mapping for the proxy.
 func (sp *StreamProxy) UpdateContext(fPid string, flMap map[string][]byte) {
 	sp.mu.Lock()
 	defer sp.mu.Unlock()
@@ -68,12 +65,11 @@ func (sp *StreamProxy) UpdateContext(fPid string, flMap map[string][]byte) {
 	sp.cacheMu.Unlock()
 }
 
-// Start binds and starts the HTTP proxy server.
 func (sp *StreamProxy) Start() (int, error) {
 	addr := fmt.Sprintf("127.0.0.1:%d", sp.port)
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
-		// If preferred port is busy, fallback to random available port
+
 		if sp.port != 0 {
 			ln, err = net.Listen("tcp", "127.0.0.1:0")
 			if err != nil {
@@ -104,7 +100,6 @@ func (sp *StreamProxy) Start() (int, error) {
 	return sp.port, nil
 }
 
-// Stop gracefully shuts down the proxy server.
 func (sp *StreamProxy) Stop() error {
 	if sp.server != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -114,7 +109,6 @@ func (sp *StreamProxy) Stop() error {
 	return nil
 }
 
-// StreamURL returns the full local streaming URL for a file in the folder.
 func (sp *StreamProxy) StreamURL(fPid string, fileName string) string {
 	escapedName := url.PathEscape(fileName)
 	return fmt.Sprintf("http://127.0.0.1:%d/stream/%s/%s", sp.port, fPid, escapedName)
@@ -143,7 +137,6 @@ func (sp *StreamProxy) handleStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// URL format: /stream/{folderPid}/{fileName}
 	path := strings.TrimPrefix(r.URL.Path, "/stream/")
 	slashIdx := strings.Index(path, "/")
 	if slashIdx == -1 {
@@ -173,7 +166,6 @@ func (sp *StreamProxy) handleStream(w http.ResponseWriter, r *http.Request) {
 	origSz := int64(opsec.DecodeInt(flInfo[44:52]))
 	fpid := cli.ObjPid(fk)
 
-	// Parse Range request
 	var rS int64 = 0
 	var rE int64 = origSz - 1
 	partial := false
@@ -339,7 +331,7 @@ func (sp *StreamProxy) getDecryptedChunk(fPid, fpid string, aesKey []byte, origS
 	}
 
 	sp.cacheMu.Lock()
-	if len(sp.chunkCache) > 32 { // keep up to 32MB in RAM
+	if len(sp.chunkCache) > 32 {
 		for k := range sp.chunkCache {
 			delete(sp.chunkCache, k)
 			break

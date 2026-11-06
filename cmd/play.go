@@ -14,9 +14,9 @@ import (
 )
 
 var (
-	proxyPort     int
-	chosenPlayer  string
-	noAutoLaunch  bool
+	proxyPort    int
+	chosenPlayer string
+	noAutoLaunch bool
 )
 
 var playCmd = &cobra.Command{
@@ -41,7 +41,6 @@ var playCmd = &cobra.Command{
 			return fmt.Errorf("file '%s' not found in folder '%s'", fileName, folderName)
 		}
 
-		// 1. Initialize local on-demand decryption stream proxy
 		streamProxy := proxy.NewStreamProxy(cli, proxyPort)
 		streamProxy.UpdateContext(fPid, flMap)
 
@@ -62,7 +61,6 @@ var playCmd = &cobra.Command{
 			return nil
 		}
 
-		// 2. Locate or launch media player
 		playerBin, playerArgs := findMediaPlayer(chosenPlayer, streamURL)
 		if playerBin == "" {
 			fmt.Printf("%s[!] No dedicated media player (mpv/vlc/ffplay/iina) found in PATH.%s\n", ColorYellow, ColorReset)
@@ -78,7 +76,6 @@ var playCmd = &cobra.Command{
 		playerCmd.Stderr = os.Stderr
 		playerCmd.Stdin = os.Stdin
 
-		// Handle graceful termination when user interrupts or player exits
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
@@ -90,7 +87,7 @@ var playCmd = &cobra.Command{
 		}()
 
 		if err := playerCmd.Run(); err != nil {
-			// User exiting player is normal
+
 		}
 
 		fmt.Printf("\n%s[✓] Playback ended. Streaming proxy closed.%s\n", ColorGreen, ColorReset)
@@ -163,7 +160,6 @@ func findMediaPlayer(preferred, streamURL string) (string, []string) {
 		}
 	}
 
-	// Priority list of players
 	candidates := []string{"mpv", "iina", "vlc", "ffplay"}
 	for _, name := range candidates {
 		if path, err := exec.LookPath(name); err == nil {
@@ -171,7 +167,6 @@ func findMediaPlayer(preferred, streamURL string) (string, []string) {
 		}
 	}
 
-	// On macOS, try open or VLC application directly
 	if runtime.GOOS == "darwin" {
 		if _, err := os.Stat("/Applications/VLC.app"); err == nil {
 			return "open", []string{"-a", "VLC", streamURL}
@@ -182,7 +177,6 @@ func findMediaPlayer(preferred, streamURL string) (string, []string) {
 		return "open", []string{streamURL}
 	}
 
-	// On Linux, try xdg-open
 	if runtime.GOOS == "linux" {
 		if path, err := exec.LookPath("xdg-open"); err == nil {
 			return path, []string{streamURL}

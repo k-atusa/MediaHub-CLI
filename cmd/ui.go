@@ -8,7 +8,6 @@ import (
 	"golang.org/x/term"
 )
 
-// ANSI Color constants
 const (
 	ColorReset   = "\033[0m"
 	ColorBold    = "\033[1m"
@@ -22,7 +21,6 @@ const (
 	ColorGray    = "\033[90m"
 )
 
-// FormatBytes formats a byte count into a human-readable string.
 func FormatBytes(b int64) string {
 	const unit = 1024
 	if b < unit {
@@ -36,7 +34,6 @@ func FormatBytes(b int64) string {
 	return fmt.Sprintf("%.2f %cB", float64(b)/float64(div), "KMGTPE"[exp])
 }
 
-// ReadPasswordSecurely prompts for and reads a password without echoing.
 func ReadPasswordSecurely(prompt string) (string, error) {
 	fmt.Print(prompt)
 	bytePassword, err := term.ReadPassword(int(syscall.Stdin))
@@ -47,7 +44,6 @@ func ReadPasswordSecurely(prompt string) (string, error) {
 	return strings.TrimSpace(string(bytePassword)), nil
 }
 
-// RenderProgressBar outputs a console progress bar in-place.
 func RenderProgressBar(label string, current, total int64, speed float64) {
 	if total <= 0 {
 		return
@@ -83,7 +79,6 @@ func RenderProgressBar(label string, current, total int64, speed float64) {
 	}
 }
 
-// PrintTable formats and prints tabular data with column alignment.
 func PrintTable(headers []string, rows [][]string) {
 	colWidths := make([]int, len(headers))
 	for i, h := range headers {
@@ -97,20 +92,17 @@ func PrintTable(headers []string, rows [][]string) {
 		}
 	}
 
-	// Print headers
 	fmt.Print(ColorBold + ColorCyan)
 	for i, h := range headers {
 		fmt.Printf("%-*s  ", colWidths[i], h)
 	}
 	fmt.Println(ColorReset)
 
-	// Print separator
 	for i := range headers {
 		fmt.Print(strings.Repeat("-", colWidths[i]) + "  ")
 	}
 	fmt.Println()
 
-	// Print rows
 	for _, row := range rows {
 		for i, cell := range row {
 			if i < len(colWidths) {

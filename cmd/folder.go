@@ -11,10 +11,10 @@ import (
 )
 
 var (
-	sharePassword string
-	shareOutFile  string
+	sharePassword  string
+	shareOutFile   string
 	importPassword string
-	confirmDelete bool
+	confirmDelete  bool
 )
 
 var folderCmd = &cobra.Command{
@@ -85,9 +85,9 @@ var folderCreateCmd = &cobra.Command{
 }
 
 var folderUnlinkCmd = &cobra.Command{
-	Use:     "unlink <folderName>",
-	Short:   "Unlink a shared folder from your account (safe: retains server storage)",
-	Args:    cobra.ExactArgs(1),
+	Use:   "unlink <folderName>",
+	Short: "Unlink a shared folder from your account (safe: retains server storage)",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		folderName := args[0]
 		cli, err := GetClient()
@@ -137,9 +137,9 @@ var folderDeleteCmd = &cobra.Command{
 }
 
 var folderShareCmd = &cobra.Command{
-	Use:     "share <folderName>",
-	Short:   "Generate an encrypted share token for a folder",
-	Args:    cobra.ExactArgs(1),
+	Use:   "share <folderName>",
+	Short: "Generate an encrypted share token for a folder",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		folderName := args[0]
 		cli, err := GetClient()
@@ -180,9 +180,9 @@ var folderShareCmd = &cobra.Command{
 }
 
 var folderImportCmd = &cobra.Command{
-	Use:     "import <token-or-file>",
-	Short:   "Import an encrypted share token to access a shared folder",
-	Args:    cobra.ExactArgs(1),
+	Use:   "import <token-or-file>",
+	Short: "Import an encrypted share token to access a shared folder",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		target := args[0]
 		cli, err := GetClient()
@@ -218,7 +218,6 @@ var folderImportCmd = &cobra.Command{
 	},
 }
 
-// Top-level aliases for convenient fast typing:
 var lsCmd = &cobra.Command{
 	Use:   "ls [folderName]",
 	Short: "List folders or files inside a folder",

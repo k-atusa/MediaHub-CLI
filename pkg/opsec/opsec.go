@@ -10,7 +10,6 @@ import (
 	"github.com/k-atusa/mediahub-cli/pkg/bencrypt"
 )
 
-// Opsec implements the MediaHub / USAG Opsec header specification.
 type Opsec struct {
 	SaltLen     int
 	HeadAlgo    string
@@ -113,7 +112,6 @@ func (op *Opsec) unwrapEncHead(data []byte) error {
 	return nil
 }
 
-// Encpw encrypts the Opsec header using a password-derived key.
 func (op *Opsec) Encpw(method string, pw []byte, kf []byte) ([]byte, error) {
 	op.HeadAlgo = method
 	op.Salt = bencrypt.Random(op.SaltLen)
@@ -156,7 +154,6 @@ func (op *Opsec) Encpw(method string, pw []byte, kf []byte) ([]byte, error) {
 	return EncodeCfg(cfg), nil
 }
 
-// View loads the outer Opsec header fields without decrypting the payload.
 func (op *Opsec) View(data []byte) error {
 	op.Clear()
 	cfg, err := DecodeCfg(data)
@@ -181,7 +178,6 @@ func (op *Opsec) View(data []byte) error {
 	return nil
 }
 
-// Decpw decrypts the inner Opsec payload using a password.
 func (op *Opsec) Decpw(pw []byte, kf []byte) error {
 	if op.HeadAlgo == "" || len(op.EncHeadData) == 0 {
 		return errors.New("opsec header not initialized or invalid")
@@ -209,7 +205,6 @@ func (op *Opsec) Decpw(pw []byte, kf []byte) error {
 	return op.unwrapEncHead(headData)
 }
 
-// ReadHeader reads a YAS2-framed Opsec header from an io.Reader.
 func ReadHeader(r io.Reader, maxCut int) ([]byte, error) {
 	var totalRead int
 	magic := make([]byte, 4)
@@ -237,7 +232,7 @@ func ReadHeader(r io.Reader, maxCut int) ([]byte, error) {
 			}
 			return head, nil
 		}
-		// skip 124 bytes
+
 		skip := make([]byte, 124)
 		n, _ = io.ReadFull(r, skip)
 		totalRead += n
@@ -247,7 +242,6 @@ func ReadHeader(r io.Reader, maxCut int) ([]byte, error) {
 	}
 }
 
-// WriteHeader writes a YAS2-framed Opsec header to an io.Writer.
 func WriteHeader(w io.Writer, head []byte) error {
 	if _, err := w.Write([]byte("YAS2")); err != nil {
 		return err
@@ -271,7 +265,6 @@ func WriteHeader(w io.Writer, head []byte) error {
 	return err
 }
 
-// ExportShareToken packages a folder name and folderKey into an encrypted share token string.
 func ExportShareToken(folderName string, folderKey []byte, password string) (string, error) {
 	if password == "" {
 		return "", errors.New("password cannot be empty")
@@ -288,7 +281,6 @@ func ExportShareToken(folderName string, folderKey []byte, password string) (str
 	return bencode.Encode64(head, "#", 40, 10)
 }
 
-// ImportShareToken decrypts a share token string and returns the folder name and folderKey.
 func ImportShareToken(tokenText string, password string) (string, []byte, error) {
 	if password == "" || strings.TrimSpace(tokenText) == "" {
 		return "", nil, errors.New("password and token cannot be empty")

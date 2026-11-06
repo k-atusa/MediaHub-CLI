@@ -14,7 +14,6 @@ import (
 
 const Pepper = "_PROJECT_WHY_MEDIAHUB_PEPPER_2026_!@#$"
 
-// FileInfo holds metadata about a stored file.
 type FileInfo struct {
 	Name string
 	Size int64
@@ -22,7 +21,6 @@ type FileInfo struct {
 	Key  []byte
 }
 
-// Client is the MediaHub API and encryption client.
 type Client struct {
 	ServerURL   string
 	Username    string
@@ -34,7 +32,6 @@ type Client struct {
 	HTTPClient  *http.Client
 }
 
-// NewClient initializes a new MediaHub client.
 func NewClient(serverURL, username, password string, insecureTLS bool) *Client {
 	cleanURL := strings.TrimRight(serverURL, "/")
 	tr := &http.Transport{
@@ -44,7 +41,7 @@ func NewClient(serverURL, username, password string, insecureTLS bool) *Client {
 	}
 	httpClient := &http.Client{
 		Transport: tr,
-		Timeout:   0, // No global timeout for large streaming/uploads
+		Timeout:   0,
 	}
 
 	return &Client{
@@ -57,12 +54,10 @@ func NewClient(serverURL, username, password string, insecureTLS bool) *Client {
 	}
 }
 
-// UsrPid derives a user identifier string from stKey.
 func (c *Client) UsrPid(key []byte) string {
 	return hex.EncodeToString(bencrypt.SHA3256(key)[:16])
 }
 
-// ObjPid derives an object (folder or file) ID from key bytes.
 func (c *Client) ObjPid(key []byte) string {
 	if len(key) < 44 {
 		return ""
@@ -70,7 +65,6 @@ func (c *Client) ObjPid(key []byte) string {
 	return hex.EncodeToString(key[32:44])
 }
 
-// Auth computes the user hash (uHash) and encryption key (uKey) using Argon2id.
 func (c *Client) Auth() error {
 	salt := bencrypt.SHA3256([]byte(c.Username + Pepper))
 	pw := bencode.NormPW(c.Password)
@@ -90,14 +84,12 @@ func (c *Client) Auth() error {
 	return nil
 }
 
-// SetAuth manually sets authenticated credentials (e.g. loaded from session).
 func (c *Client) SetAuth(uHash string, uKey []byte) {
 	c.UHash = uHash
 	c.UKey = make([]byte, len(uKey))
 	copy(c.UKey, uKey)
 }
 
-// ProgressReader wraps an io.Reader to track upload progress.
 type ProgressReader struct {
 	reader     io.Reader
 	totalBytes int64
