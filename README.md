@@ -74,6 +74,9 @@ mediahub login -s https://media.yourdomain.com:443 -u alice -p "YourPassword!" -
 # 현재 로그인 상태 및 연결 확인
 mediahub status
 
+# 서버 공지사항 조회
+mediahub notice
+
 # 세션 로그아웃
 mediahub logout
 ```
@@ -115,6 +118,15 @@ mediahub put MyFolder sample.mp4
 
 # 여러 파일 및 디렉토리 일괄 업로드
 mediahub upload MyFolder file1.png file2.pdf ./videos/
+
+# 복호화된 파일 내용을 다운로드 없이 터미널 표준 출력(stdout)으로 확인
+mediahub cat MyFolder notes.txt
+# 또는 파이프라인 연계
+mediahub cat MyFolder data.json | jq .
+
+# 폴더 또는 파일의 암호화 상세 메타데이터 확인 (PID, 키, 패딩 길이 등)
+mediahub info MyFolder
+mediahub info MyFolder sample.mp4
 
 # 파일 다운로드 및 복호화
 mediahub download MyFolder sample.mp4
