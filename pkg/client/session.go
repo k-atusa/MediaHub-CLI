@@ -1,0 +1,107 @@
+package client
+
+import (
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
+// SessionConfig persists client authentication details locally.
+type SessionConfig struct {
+	ServerURL   string `json:"server_url"`
+	Username    string `json:"username"`
+	UHash       string `json:"uhash"`
+	UKeyHex     string `json:"ukey_hex"`
+	InsecureTLS bool   `json:"insecure_tls"`
+}
+
+// ConfigFilePath returns the path to ~/.mediahub/config.json.
+func ConfigFilePath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".mediahub", "config.json"), nil
+}
+
+// SaveSession saves the current client's credentials to config.json.
+func (c *Client) SaveSession() error {
+	cfgPath, err := ConfigFilePath()
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(cfgPath), 0700); err != nil {
+		return err
+	}
+
+	cfg := SessionConfig{
+		ServerURL:   c.ServerURL,
+		Username:    c.Username,
+		UHash:       c.UHash,
+		UKeyHex:     hex.EncodeToString(c.UKey),
+		InsecureTLS: c.InsecureTLS,
+	}
+
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(cfgPath, data, 0600)
+}
+
+// LoadSavedSession loads session credentials from ~/.mediahub/config.json.
+func LoadSavedSession() (*Client, error) {
+	cfgPath, err := ConfigFilePath()
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, errors.New("no active session: please run 'mediahub login' first")
+		}
+		return nil, err
+	}
+
+	var cfg SessionConfig
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("corrupted session config: %w", err)
+	}
+
+	uKey, err := hex.DecodeString(cfg.UKeyHex)
+	if err != nil {
+		return nil, fmt.Errorf("invalid stored key: %w", err)
+	}
+
+	cli := NewClient(cfg.ServerURL, cfg.Username, "", cfg.InsecureTLS)
+	cli.SetAuth(cfg.UHash, uKey)
+	return cli, nil
+}
+
+// ClearSession deletes the stored session credentials.
+func ClearSession() error {
+	cfgPath, err := ConfigFilePath()
+	if err != nil {
+		return err
+	}
+	if err := os.Remove(cfgPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+// HasActiveSession checks if a saved session configuration file exists.
+func HasActiveSession() bool {
+	cfgPath, err := ConfigFilePath()
+	if err != nil {
+		return false
+	}
+	info, err := os.Stat(cfgPath)
+	return err == nil && !info.IsDir()
+}
