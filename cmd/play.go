@@ -37,8 +37,9 @@ var playCmd = &cobra.Command{
 			return err
 		}
 
-		if _, exists := flMap[fileName]; !exists {
-			return fmt.Errorf("file '%s' not found in folder '%s'", fileName, folderName)
+		actualName, _, _, err := cli.ResolveFile(flMap, fileName)
+		if err != nil {
+			return err
 		}
 
 		streamProxy := proxy.NewStreamProxy(cli, proxyPort)
@@ -50,7 +51,7 @@ var playCmd = &cobra.Command{
 		}
 		defer streamProxy.Stop()
 
-		streamURL := streamProxy.StreamURL(fPid, fileName)
+		streamURL := streamProxy.StreamURL(fPid, actualName)
 		fmt.Printf("%s[✓] Stream proxy running on port %d%s\n", ColorGreen, port, ColorReset)
 		fmt.Printf("    Streaming URL: %s%s%s\n", ColorCyan, streamURL, ColorReset)
 

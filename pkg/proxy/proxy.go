@@ -152,6 +152,16 @@ func (sp *StreamProxy) handleStream(w http.ResponseWriter, r *http.Request) {
 
 	sp.mu.RLock()
 	flInfo, exists := sp.flMap[fileName]
+	if !exists {
+		for actualName, info := range sp.flMap {
+			if len(info) >= 44 && sp.client.ObjPid(info[:44]) == fileName {
+				flInfo = info
+				exists = true
+				fileName = actualName
+				break
+			}
+		}
+	}
 	currentFPid := sp.fPid
 	cli := sp.client
 	sp.mu.RUnlock()

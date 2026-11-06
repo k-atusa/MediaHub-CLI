@@ -15,13 +15,18 @@ var infoCmd = &cobra.Command{
 	Short:   "Display cryptographic details and metadata for a folder or file",
 	Args:    cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		folderName := args[0]
+		folderTarget := args[0]
 		cli, err := GetClient()
 		if err != nil {
 			return err
 		}
 
-		fPid, fKey, flMap, err := cli.GetFiles(folderName)
+		actualFolderName, fPid, fKey, err := cli.ResolveFolder(folderTarget)
+		if err != nil {
+			return err
+		}
+
+		_, _, flMap, err := cli.GetFiles(actualFolderName)
 		if err != nil {
 			return err
 		}
@@ -37,7 +42,7 @@ var infoCmd = &cobra.Command{
 			}
 
 			fmt.Printf("\n%sFolder Information:%s\n", ColorBold, ColorReset)
-			fmt.Printf("  Name:             %s%s%s\n", ColorCyan, folderName, ColorReset)
+			fmt.Printf("  Name:             %s%s%s\n", ColorCyan, actualFolderName, ColorReset)
 			fmt.Printf("  PID:              %s\n", fPid)
 			fmt.Printf("  Key (Full 44B):   %s\n", hex.EncodeToString(fKey))
 			fmt.Printf("  Total Files:      %d\n", totalFiles)
@@ -45,22 +50,21 @@ var infoCmd = &cobra.Command{
 			return nil
 		}
 
-		fileName := args[1]
-		flInfo, exists := flMap[fileName]
-		if !exists {
-			return fmt.Errorf("file '%s' not found in folder '%s'", fileName, folderName)
+		fileTarget := args[1]
+		actualFileName, fpid, flInfo, err := cli.ResolveFile(flMap, fileTarget)
+		if err != nil {
+			return err
 		}
 
 		fk := flInfo[:44]
 		origSz := int64(opsec.DecodeInt(flInfo[44:52]))
-		fpid := cli.ObjPid(fk)
 		encSz := bencrypt.AfterSize(origSz)
 		padSz := opsec.PadLen(encSz)
 		totalRemote := encSz + padSz
 
 		fmt.Printf("\n%sFile Cryptographic Details:%s\n", ColorBold, ColorReset)
-		fmt.Printf("  Folder:           %s (PID: %s)\n", folderName, fPid)
-		fmt.Printf("  File Name:        %s%s%s\n", ColorCyan, fileName, ColorReset)
+		fmt.Printf("  Folder:           %s (PID: %s)\n", actualFolderName, fPid)
+		fmt.Printf("  File Name:        %s%s%s\n", ColorCyan, actualFileName, ColorReset)
 		fmt.Printf("  File PID:         %s\n", fpid)
 		fmt.Printf("  File Key (44B):   %s\n", hex.EncodeToString(fk))
 		fmt.Printf("  Original Size:    %s (%d bytes)\n", FormatBytes(origSz), origSz)

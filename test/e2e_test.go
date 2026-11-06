@@ -268,8 +268,22 @@ func TestE2ELifecycle(t *testing.T) {
 		t.Fatalf("CatFile content mismatch")
 	}
 
-	if err := cli.DeleteFile(folderName, "sample.mp4"); err != nil {
-		t.Fatalf("DeleteFile failed: %v", err)
+	samplePid := files[0].PID
+	var catPidBuf bytes.Buffer
+	if err := cli.CatFile(fPid, samplePid, &catPidBuf); err != nil {
+		t.Fatalf("CatFile by PID failed: %v", err)
+	}
+	if !bytes.Equal(sampleContent, catPidBuf.Bytes()) {
+		t.Fatalf("CatFile by PID content mismatch")
+	}
+
+	pidFiles, err := cli.ListFiles(fPid)
+	if err != nil || len(pidFiles) != 1 {
+		t.Fatalf("ListFiles by folder PID failed: %v", err)
+	}
+
+	if err := cli.DeleteFile(fPid, samplePid); err != nil {
+		t.Fatalf("DeleteFile by PID failed: %v", err)
 	}
 	filesAfterDelete, _ := cli.ListFiles(folderName)
 	if len(filesAfterDelete) != 0 {

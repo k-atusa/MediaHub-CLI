@@ -13,15 +13,23 @@ import (
 	"github.com/k-atusa/mediahub-cli/pkg/opsec"
 )
 
-func (c *Client) GetFiles(folderName string) (string, []byte, map[string][]byte, error) {
-	if _, err := c.FetchFolders(); err != nil {
+func (c *Client) ResolveFile(flMap map[string][]byte, target string) (string, string, []byte, error) {
+	if flInfo, exists := flMap[target]; exists && len(flInfo) >= 52 {
+		return target, c.ObjPid(flInfo[:44]), flInfo, nil
+	}
+	for name, flInfo := range flMap {
+		if len(flInfo) >= 44 && c.ObjPid(flInfo[:44]) == target {
+			return name, target, flInfo, nil
+		}
+	}
+	return "", "", nil, fmt.Errorf("file '%s' not found (by name or PID)", target)
+}
+
+func (c *Client) GetFiles(folderTarget string) (string, []byte, map[string][]byte, error) {
+	_, fPid, fKey, err := c.ResolveFolder(folderTarget)
+	if err != nil {
 		return "", nil, nil, err
 	}
-	fKey, exists := c.FldMap[folderName]
-	if !exists {
-		return "", nil, nil, fmt.Errorf("folder '%s' not found", folderName)
-	}
-	fPid := c.ObjPid(fKey)
 
 	url := fmt.Sprintf("%s/api/storage/%s/names", c.ServerURL, fPid)
 	resp, err := c.HTTPClient.Get(url)
@@ -198,20 +206,20 @@ func (c *Client) UploadFile(folderName string, localPath string, progCb func(sen
 	return c.saveFiles(fPid, fKey, flMap)
 }
 
-func (c *Client) DownloadFile(folderName string, fileName string, outPath string, progCb func(sent, total int64, speed float64)) error {
-	fPid, _, flMap, err := c.GetFiles(folderName)
+func (c *Client) DownloadFile(folderTarget string, fileTarget string, outPath string, progCb func(sent, total int64, speed float64)) error {
+	fPid, _, flMap, err := c.GetFiles(folderTarget)
 	if err != nil {
 		return err
 	}
 
-	flInfo, exists := flMap[fileName]
-	if !exists {
-		return fmt.Errorf("file '%s' not found in folder '%s'", fileName, folderName)
+	actualName, fpid, flInfo, err := c.ResolveFile(flMap, fileTarget)
+	if err != nil {
+		return err
 	}
+	_ = actualName
 
 	fk := flInfo[:44]
 	origSz := int64(opsec.DecodeInt(flInfo[44:52]))
-	fpid := c.ObjPid(fk)
 
 	smx, err := bencrypt.NewSymMaster("gcmx1", fk[:32])
 	if err != nil {
@@ -251,19 +259,17 @@ func (c *Client) DownloadFile(folderName string, fileName string, outPath string
 	return nil
 }
 
-func (c *Client) DeleteFile(folderName string, fileName string) error {
-	fPid, fKey, flMap, err := c.GetFiles(folderName)
+func (c *Client) DeleteFile(folderTarget string, fileTarget string) error {
+	fPid, fKey, flMap, err := c.GetFiles(folderTarget)
 	if err != nil {
 		return err
 	}
 
-	flInfo, exists := flMap[fileName]
-	if !exists {
-		return fmt.Errorf("file '%s' not found in folder '%s'", fileName, folderName)
+	actualName, fpid, flInfo, err := c.ResolveFile(flMap, fileTarget)
+	if err != nil {
+		return err
 	}
-
-	fk := flInfo[:44]
-	fpid := c.ObjPid(fk)
+	_ = flInfo
 
 	urlDat := fmt.Sprintf("%s/api/media/%s/%s/dat", c.ServerURL, fPid, fpid)
 	reqDat, _ := http.NewRequest(http.MethodDelete, urlDat, nil)
@@ -281,7 +287,7 @@ func (c *Client) DeleteFile(folderName string, fileName string) error {
 		respThumb.Body.Close()
 	}
 
-	delete(flMap, fileName)
+	delete(flMap, actualName)
 	return c.saveFiles(fPid, fKey, flMap)
 }
 
@@ -325,20 +331,20 @@ func (c *Client) TrimFolder(folderName string) (string, error) {
 	return string(body), nil
 }
 
-func (c *Client) CatFile(folderName string, fileName string, dst io.Writer) error {
-	fPid, _, flMap, err := c.GetFiles(folderName)
+func (c *Client) CatFile(folderTarget string, fileTarget string, dst io.Writer) error {
+	fPid, _, flMap, err := c.GetFiles(folderTarget)
 	if err != nil {
 		return err
 	}
 
-	flInfo, exists := flMap[fileName]
-	if !exists {
-		return fmt.Errorf("file '%s' not found in folder '%s'", fileName, folderName)
+	actualName, fpid, flInfo, err := c.ResolveFile(flMap, fileTarget)
+	if err != nil {
+		return err
 	}
+	_ = actualName
 
 	fk := flInfo[:44]
 	origSz := int64(opsec.DecodeInt(flInfo[44:52]))
-	fpid := c.ObjPid(fk)
 
 	smx, err := bencrypt.NewSymMaster("gcmx1", fk[:32])
 	if err != nil {

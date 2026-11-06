@@ -136,28 +136,36 @@ func (c *Client) CreateFolder(name string) error {
 	return nil
 }
 
-func (c *Client) UnlinkFolder(name string) error {
+func (c *Client) ResolveFolder(target string) (string, string, []byte, error) {
 	if _, err := c.FetchFolders(); err != nil {
-		return err
+		return "", "", nil, err
 	}
-	if _, exists := c.FldMap[name]; !exists {
-		return fmt.Errorf("folder '%s' not found", name)
+	if fKey, exists := c.FldMap[target]; exists {
+		return target, c.ObjPid(fKey), fKey, nil
+	}
+	for name, fKey := range c.FldMap {
+		if c.ObjPid(fKey) == target {
+			return name, target, fKey, nil
+		}
+	}
+	return "", "", nil, fmt.Errorf("folder '%s' not found (by name or PID)", target)
+}
+
+func (c *Client) UnlinkFolder(target string) error {
+	name, _, _, err := c.ResolveFolder(target)
+	if err != nil {
+		return err
 	}
 
 	delete(c.FldMap, name)
 	return c.saveFolders()
 }
 
-func (c *Client) DeleteFolder(name string) error {
-	if _, err := c.FetchFolders(); err != nil {
+func (c *Client) DeleteFolder(target string) error {
+	name, fPid, _, err := c.ResolveFolder(target)
+	if err != nil {
 		return err
 	}
-	fKey, exists := c.FldMap[name]
-	if !exists {
-		return fmt.Errorf("folder '%s' not found", name)
-	}
-
-	fPid := c.ObjPid(fKey)
 
 	url := fmt.Sprintf("%s/api/storage/%s/names", c.ServerURL, fPid)
 	req, err := http.NewRequest(http.MethodDelete, url, nil)
@@ -180,13 +188,10 @@ func (c *Client) DeleteFolder(name string) error {
 	return c.saveFolders()
 }
 
-func (c *Client) ExportShare(name string, password string) (string, error) {
-	if _, err := c.FetchFolders(); err != nil {
+func (c *Client) ExportShare(target string, password string) (string, error) {
+	name, _, fKey, err := c.ResolveFolder(target)
+	if err != nil {
 		return "", err
-	}
-	fKey, exists := c.FldMap[name]
-	if !exists {
-		return "", fmt.Errorf("folder '%s' not found", name)
 	}
 
 	return opsec.ExportShareToken(name, fKey, password)

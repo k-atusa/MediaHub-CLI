@@ -105,6 +105,8 @@ mediahub folder delete MyFolder -y
 
 ### 3. 파일 업로드 및 다운로드 (Files)
 
+> 모든 파일 및 폴더 명령어는 이름뿐만 아니라 고유 식별자인 **PID**로도 직접 접근할 수 있습니다. (예: `mediahub ls <folderPid>`, `mediahub get <folderPid> <filePid>`)
+
 ```bash
 # 특정 폴더의 파일 목록 보기
 mediahub ls MyFolder
