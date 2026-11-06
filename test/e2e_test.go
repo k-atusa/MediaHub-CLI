@@ -120,6 +120,11 @@ func newMockServer() *MockMediaHubServer {
 		}
 	})
 
+	mux.HandleFunc("/api/notice", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"notice":"Welcome to MediaHub E2E test"}`))
+	})
+
 	s.ts = httptest.NewServer(mux)
 	return s
 }
@@ -248,6 +253,19 @@ func TestE2ELifecycle(t *testing.T) {
 
 	if err := bobCli.UnlinkFolder(importedFolderName); err != nil {
 		t.Fatalf("Bob UnlinkFolder failed: %v", err)
+	}
+
+	notice, err := cli.GetNotice()
+	if err != nil || notice != "Welcome to MediaHub E2E test" {
+		t.Fatalf("GetNotice failed: %v, %s", err, notice)
+	}
+
+	var catBuf bytes.Buffer
+	if err := cli.CatFile(folderName, "sample.mp4", &catBuf); err != nil {
+		t.Fatalf("CatFile failed: %v", err)
+	}
+	if !bytes.Equal(sampleContent, catBuf.Bytes()) {
+		t.Fatalf("CatFile content mismatch")
 	}
 
 	if err := cli.DeleteFile(folderName, "sample.mp4"); err != nil {

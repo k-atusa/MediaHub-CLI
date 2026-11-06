@@ -251,6 +251,24 @@ var fileTrimCmd = &cobra.Command{
 	},
 }
 
+var fileCatCmd = &cobra.Command{
+	Use:     "cat <folderName> <fileName>",
+	Aliases: []string{"view"},
+	Short:   "Decrypt and print file contents directly to standard output",
+	Args:    cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		folderName := args[0]
+		fileName := args[1]
+
+		cli, err := GetClient()
+		if err != nil {
+			return err
+		}
+
+		return cli.CatFile(folderName, fileName, os.Stdout)
+	},
+}
+
 func init() {
 	fileDownloadCmd.Flags().StringVarP(&downloadOutFile, "out", "o", "", "Destination file path")
 	fileDownloadCmd.Flags().StringVarP(&downloadOutDir, "dir", "d", "", "Destination directory")
@@ -262,6 +280,7 @@ func init() {
 	fileCmd.AddCommand(fileDownloadAllCmd)
 	fileCmd.AddCommand(fileDeleteCmd)
 	fileCmd.AddCommand(fileTrimCmd)
+	fileCmd.AddCommand(fileCatCmd)
 
 	RootCmd.AddCommand(fileCmd)
 	RootCmd.AddCommand(fileUploadCmd)
@@ -269,4 +288,5 @@ func init() {
 	RootCmd.AddCommand(fileDownloadAllCmd)
 	RootCmd.AddCommand(fileDeleteCmd)
 	RootCmd.AddCommand(fileTrimCmd)
+	RootCmd.AddCommand(fileCatCmd)
 }

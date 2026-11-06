@@ -324,3 +324,59 @@ func (c *Client) TrimFolder(folderName string) (string, error) {
 
 	return string(body), nil
 }
+
+func (c *Client) CatFile(folderName string, fileName string, dst io.Writer) error {
+	fPid, _, flMap, err := c.GetFiles(folderName)
+	if err != nil {
+		return err
+	}
+
+	flInfo, exists := flMap[fileName]
+	if !exists {
+		return fmt.Errorf("file '%s' not found in folder '%s'", fileName, folderName)
+	}
+
+	fk := flInfo[:44]
+	origSz := int64(opsec.DecodeInt(flInfo[44:52]))
+	fpid := c.ObjPid(fk)
+
+	smx, err := bencrypt.NewSymMaster("gcmx1", fk[:32])
+	if err != nil {
+		return err
+	}
+	ciphSz := bencrypt.AfterSize(origSz)
+
+	downURL := fmt.Sprintf("%s/api/media/%s/%s/dat", c.ServerURL, fPid, fpid)
+	resp, err := c.HTTPClient.Get(downURL)
+	if err != nil {
+		return fmt.Errorf("download connection error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+		return fmt.Errorf("download failed: HTTP %d", resp.StatusCode)
+	}
+
+	return smx.DeGCMx(resp.Body, ciphSz, dst, nil)
+}
+
+func (c *Client) GetNotice() (string, error) {
+	url := fmt.Sprintf("%s/api/notice", c.ServerURL)
+	resp, err := c.HTTPClient.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("connection error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to fetch notice: HTTP %d", resp.StatusCode)
+	}
+
+	var data struct {
+		Notice string `json:"notice"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return "", err
+	}
+	return data.Notice, nil
+}
