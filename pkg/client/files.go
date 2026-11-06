@@ -141,6 +141,23 @@ func (c *Client) UploadFile(folderName string, localPath string, progCb func(sen
 	fk := append(bencrypt.Random(32), bencrypt.Random(12)...)
 	fpid := c.ObjPid(fk)
 
+	thumbBytes := generateImageThumbnail(localPath)
+	if len(thumbBytes) > 0 {
+		if smThumb, err := bencrypt.NewSymMaster("gcm1", fk[:32]); err == nil {
+			if encThumb, err := smThumb.EnBin(thumbBytes); err == nil {
+				thumbURL := fmt.Sprintf("%s/api/media/%s/%s/thumb", c.ServerURL, fPid, fpid)
+				reqThumb, err := http.NewRequest(http.MethodPost, thumbURL, bytes.NewReader(encThumb))
+				if err == nil {
+					reqThumb.Header.Set("Content-Type", "application/octet-stream")
+					reqThumb.Header.Set("X-User-Hash", c.UHash)
+					if respThumb, err := c.HTTPClient.Do(reqThumb); err == nil {
+						respThumb.Body.Close()
+					}
+				}
+			}
+		}
+	}
+
 	smx, err := bencrypt.NewSymMaster("gcmx1", fk[:32])
 	if err != nil {
 		return err
